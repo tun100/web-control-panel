@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as os from 'os';
 import * as process from 'process';
 import * as inquirer from 'inquirer';
+var sqlite3 = require('sqlite3').verbose();
 var ora = require('ora');
 var _ = require('lodash');
 var sh = require('shelljs');
@@ -38,6 +39,66 @@ function createOra(msg: string) {
 	return ora(msg).start();
 }
 
+function getStoreDir(targetPath: string = '') {
+	var storedir = path.join(os.homedir(), '.wcpstore', targetPath);
+	return storedir;
+}
+
+const dbutils = {
+	run: async function(db, sql: string, param?: {}) {
+		return new Promise((res_func, err_func) => {
+			db.run(sql, param, function(error, res) {
+				if (error) {
+					err_func(error);
+				} else {
+					res_func(res);
+				}
+			});
+		});
+	},
+	runsafe: async function(db, sql: string, param?: {}) {
+		try {
+			return await dbutils.run(db, sql, param);
+		} catch (error) {
+			// ignore error, dbrunsafe doesn't print the error
+		}
+	},
+};
+
+async function initdb(db) {
+	await dbutils.run(
+		db,
+		`CREATE TABLE IF NOT EXISTS wcp_project (
+            id integer PRIMARY KEY autoincrement,
+            atype text,
+            apath text,
+            ajson text,
+            createtime TIMESTAMP default (datetime('now', 'localtime'))
+        )`
+	);
+	await dbutils.run(
+		db,
+		`CREATE TABLE IF NOT EXISTS wcp_system (
+            id integer PRIMARY KEY autoincrement,
+            aname text,
+            avalue text,
+            ajson text,
+            createtime TIMESTAMP default (datetime('now', 'localtime'))
+        )`
+	);
+	await dbutils.run(
+		db,
+		`CREATE TABLE IF NOT EXISTS wcp_log (
+            id integer PRIMARY KEY autoincrement,
+            atype text,
+            atitle text,
+            adesc text,
+            actn text,
+            createtime TIMESTAMP default (datetime('now', 'localtime'))
+        )`
+	);
+}
+
 const helpText = `web-control-panel help
 Usage: wcp [command] [flags]
 
@@ -48,17 +109,29 @@ wcp list-project # list all project you have created
 wcp new-project [dirpath] # create a webpack project at target path, default is crt cwd
 wcp view # serve a website, it's could help you manage all project
 
+Data Store:
+All of project meta information is in ${getStoreDir()}
+
 About me:
 Welcome to star or fork :)
 Github: https://github.com/tun100/
 Repository: https://github.com/tun100/web-control-panel`;
 
 async function entryfunc() {
-    plainlog(path.normalize(`~`));
 	if (isEmptyOrHelpArg()) {
 		// print help text
 		plainlog(helpText);
 	} else {
+		// get and auto create store dir
+		const storedir = getStoreDir();
+		if (!isPathExists(storedir)) {
+			var msgref = createOra(`homedir not settings(${storedir}), creating...`);
+			sh.mkdir('-p', storedir);
+			msgref.succeed(`creating homedir(${storedir}) success`);
+		}
+		// initialize sqlite datafile and data conn
+		var db = new sqlite3.Database(getStoreDir('meta.db'));
+		initdb(db);
 		// start analyze arguments
 		let argArr: string[] = getArgWithoutExec();
 		let command = _.first(argArr);
@@ -68,7 +141,7 @@ async function entryfunc() {
 			case 'list-project':
 				break;
 			case 'new-project':
-                // check path
+				// check path
 				if (_.isNil(options)) {
 					options = getCwdDir('');
 				}
@@ -77,7 +150,7 @@ async function entryfunc() {
 					exitProgram(-1);
 				}
 				msgref_init.succeed(`new project path is ${options}`);
-                msgref_init.stop();
+				msgref_init.stop();
 				break;
 			case 'view':
 				break;
