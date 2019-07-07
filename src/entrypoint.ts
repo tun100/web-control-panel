@@ -123,7 +123,8 @@ async function initdb(db) {
 		db,
 		`CREATE TABLE IF NOT EXISTS wcp_project (
             id integer PRIMARY KEY autoincrement,
-            atype text,
+			atype text,
+			aname text,
             apath text,
 			ajson text,
 			templateid integer,
@@ -223,7 +224,6 @@ async function entryfunc() {
 			msgref.succeed(`creating homedir(${storedir}) success`);
 		}
 		// init store dir
-		msgref = createNewInfoSession('init storedir...');
 		await dbutils.handleIfEmpty(db, `select * from wcp_template`, {}, async function() {
 			let templateDefaultFolder = getStoreDir('default');
 			await dbutils.run(
@@ -232,18 +232,25 @@ async function entryfunc() {
 				{}
 			);
 			sh.mkdir('-p', templateDefaultFolder);
-			sh.cp('-rf', [getCrtPath('../store/*', __dirname)], templateDefaultFolder);
+			sh.cp(
+				'-rf',
+				[getCrtPath('../store/*', __dirname), getCrtPath('../store/.*', __dirname)],
+				templateDefaultFolder
+			);
 		});
-		msgref.succeed('finish init storedir');
 		// start analyze arguments
 		let argArr: string[] = getArgWithoutExec();
 		let command = _.first(argArr);
 		let options = _.get(argArr, 1);
-		var msgref = createNewInfoSession('initializing task...');
+		var initstr: string = 'initializing task...';
 		switch (command) {
 			case 'list-project':
+				var project_list = await dbutils.all(db, `select * from wcp_project`, {});
+				var project_name_list_str = _.join(_.map(project_list, x => `[${x['id']}]: ${x['aname']}`), '\n');
+				plainlog(project_name_list_str);
 				break;
 			case 'set-storedir':
+				var msgref = createNewInfoSession(initstr);
 				let crtpath_storedir = getStoreDir();
 				let newpath_storedir = options;
 				sh.cp('-rf', crtpath_storedir, newpath_newproject);
@@ -251,6 +258,7 @@ async function entryfunc() {
 				plainlog('update storedir success');
 				break;
 			case 'new-project':
+				var msgref = createNewInfoSession(initstr);
 				// check path
 				if (_.isNil(options)) {
 					options = getCwdDir('');
@@ -282,11 +290,7 @@ async function entryfunc() {
 				msgref.succeed(`new project path is ${newpath_newproject}`);
 				msgref.stop();
 				msgref = createNewInfoSession(`initializing project files...`);
-				sh.cp(
-					'-rf',
-					[getCrtPath('../template/*', __dirname), getCrtPath('../template/.*', __dirname)],
-					newpath_newproject
-				);
+				sh.cp('-rf', [getCrtPath('../template/*', __dirname)], newpath_newproject);
 				msgref.succeed(`finish init project files`);
 				msgref = createNewInfoSession(`get current wcp template list...`);
 				let template_list = await dbutils.all(db, `select * from wcp_template`, {});
@@ -306,10 +310,18 @@ async function entryfunc() {
 				} else {
 					usage_template = _.first(template_list);
 				}
+				await dbutils.run(db, `delete from wcp_project where apath='${newpath_newproject}'`);
+				// atype apath templateid
+				await dbutils.run(
+					db,
+					`insert into wcp_project (atype,aname,apath,templateid) values('webpack','${path.basename(
+						newpath_newproject
+					)}','${newpath_newproject}',${usage_template.id})`
+				);
 				msgref.succeed(`finish template choose, the name is ${_.get(usage_template, 'aname')}`);
 				msgref = createNewInfoSession(`create project record in database...`);
 				msgref.succeed(
-					`Congratulation! Project finish initialize, you could manage the project in web control panel. To access web control panel, you should run command "wcp view"`
+					`Congratulation! Create new Project Successd! You could manage the project in web control panel. To access web control panel, you should run command "wcp view"`
 				);
 				break;
 			case 'view':

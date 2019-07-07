@@ -194,7 +194,7 @@ function initdb(db) {
             switch (_a.label) {
                 case 0: 
                 // create table
-                return [4 /*yield*/, dbutils.run(db, "CREATE TABLE IF NOT EXISTS wcp_project (\n            id integer PRIMARY KEY autoincrement,\n            atype text,\n            apath text,\n\t\t\tajson text,\n\t\t\ttemplateid integer,\n            createtime TIMESTAMP default (datetime('now', 'localtime'))\n        )")];
+                return [4 /*yield*/, dbutils.run(db, "CREATE TABLE IF NOT EXISTS wcp_project (\n            id integer PRIMARY KEY autoincrement,\n\t\t\tatype text,\n\t\t\taname text,\n            apath text,\n\t\t\tajson text,\n\t\t\ttemplateid integer,\n            createtime TIMESTAMP default (datetime('now', 'localtime'))\n        )")];
                 case 1:
                     // create table
                     _a.sent();
@@ -232,7 +232,7 @@ var func_helptext = function () {
 };
 function entryfunc() {
     return __awaiter(this, void 0, void 0, function () {
-        var apphome, db, storedir, argArr, command, options, msgref, _a, crtpath_storedir, newpath_storedir, newpath_newproject, res_should_del, template_list, usage_template, template_aname_list, res_choose_template;
+        var apphome, db, storedir, argArr, command, options, initstr, _a, project_list, project_name_list_str, msgref, crtpath_storedir, newpath_storedir, msgref, newpath_newproject, res_should_del, template_list, usage_template, template_aname_list, res_choose_template;
         return __generator(this, function (_b) {
             switch (_b.label) {
                 case 0:
@@ -245,7 +245,7 @@ function entryfunc() {
                     if (!isEmptyOrHelpArg()) return [3 /*break*/, 2];
                     // print help text
                     plainlog(func_helptext());
-                    return [3 /*break*/, 15];
+                    return [3 /*break*/, 18];
                 case 2:
                     storedir = getStoreDir();
                     if (!isPathExists(storedir)) {
@@ -254,7 +254,6 @@ function entryfunc() {
                         msgref.succeed("creating homedir(" + storedir + ") success");
                     }
                     // init store dir
-                    msgref = createNewInfoSession('init storedir...');
                     return [4 /*yield*/, dbutils.handleIfEmpty(db, "select * from wcp_template", {}, function () {
                             return __awaiter(this, void 0, void 0, function () {
                                 var templateDefaultFolder;
@@ -273,37 +272,44 @@ function entryfunc() {
                             });
                         })];
                 case 3:
+                    // init store dir
                     _b.sent();
-                    msgref.succeed('finish init storedir');
                     argArr = getArgWithoutExec();
                     command = _.first(argArr);
                     options = _.get(argArr, 1);
-                    msgref = createNewInfoSession('initializing task...');
+                    initstr = 'initializing task...';
                     _a = command;
                     switch (_a) {
                         case 'list-project': return [3 /*break*/, 4];
-                        case 'set-storedir': return [3 /*break*/, 5];
-                        case 'new-project': return [3 /*break*/, 7];
-                        case 'view': return [3 /*break*/, 14];
+                        case 'set-storedir': return [3 /*break*/, 6];
+                        case 'new-project': return [3 /*break*/, 8];
+                        case 'view': return [3 /*break*/, 17];
                     }
-                    return [3 /*break*/, 15];
-                case 4: return [3 /*break*/, 15];
+                    return [3 /*break*/, 18];
+                case 4: return [4 /*yield*/, dbutils.all(db, "select * from wcp_project", {})];
                 case 5:
+                    project_list = _b.sent();
+                    project_name_list_str = _.join(_.map(project_list, function (x) { return "[" + x['id'] + "]: " + x['aname']; }), '\n');
+                    plainlog(project_name_list_str);
+                    return [3 /*break*/, 18];
+                case 6:
+                    msgref = createNewInfoSession(initstr);
                     crtpath_storedir = getStoreDir();
                     newpath_storedir = options;
                     sh.cp('-rf', crtpath_storedir, newpath_newproject);
                     return [4 /*yield*/, dbutils.run(db, "update wcp_system set avalue='" + newpath_storedir + "' where aname='storedir'")];
-                case 6:
+                case 7:
                     _b.sent();
                     plainlog('update storedir success');
-                    return [3 /*break*/, 15];
-                case 7:
+                    return [3 /*break*/, 18];
+                case 8:
+                    msgref = createNewInfoSession(initstr);
                     // check path
                     if (_.isNil(options)) {
                         options = getCwdDir('');
                     }
                     newpath_newproject = options;
-                    if (!isPathExists(newpath_newproject)) return [3 /*break*/, 9];
+                    if (!isPathExists(newpath_newproject)) return [3 /*break*/, 10];
                     msgref.stop();
                     return [4 /*yield*/, inquirer.prompt([
                             {
@@ -313,7 +319,7 @@ function entryfunc() {
                                 "default": true
                             },
                         ])];
-                case 8:
+                case 9:
                     res_should_del = _b.sent();
                     if (res_should_del['value']) {
                         msgref = createNewInfoSession("deleteing target dir files...");
@@ -325,20 +331,20 @@ function entryfunc() {
                         msgref.info("path already created, wcp need an empty and non created dir, the path is " + newpath_newproject);
                         exitProgram(-1);
                     }
-                    _b.label = 9;
-                case 9:
+                    _b.label = 10;
+                case 10:
                     sh.mkdir('-p', newpath_newproject);
                     msgref.succeed("new project path is " + newpath_newproject);
                     msgref.stop();
                     msgref = createNewInfoSession("initializing project files...");
-                    sh.cp('-rf', [getCrtPath('../template/*', __dirname), getCrtPath('../template/.*', __dirname)], newpath_newproject);
+                    sh.cp('-rf', [getCrtPath('../template/*', __dirname)], newpath_newproject);
                     msgref.succeed("finish init project files");
                     msgref = createNewInfoSession("get current wcp template list...");
                     return [4 /*yield*/, dbutils.all(db, "select * from wcp_template", {})];
-                case 10:
+                case 11:
                     template_list = _b.sent();
                     usage_template = null;
-                    if (!(_.size(template_list) !== 1)) return [3 /*break*/, 12];
+                    if (!(_.size(template_list) !== 1)) return [3 /*break*/, 13];
                     template_aname_list = _.map(template_list, function (x) { return x['aname']; });
                     return [4 /*yield*/, inquirer.prompt([
                             {
@@ -349,20 +355,27 @@ function entryfunc() {
                                 "default": _.first(template_aname_list)
                             },
                         ])];
-                case 11:
+                case 12:
                     res_choose_template = _b.sent();
                     usage_template = _.find(template_list, function (x) { return x['aname'] == res_choose_template['value']; });
-                    return [3 /*break*/, 13];
-                case 12:
-                    usage_template = _.first(template_list);
-                    _b.label = 13;
+                    return [3 /*break*/, 14];
                 case 13:
+                    usage_template = _.first(template_list);
+                    _b.label = 14;
+                case 14: return [4 /*yield*/, dbutils.run(db, "delete from wcp_project where apath='" + newpath_newproject + "'")];
+                case 15:
+                    _b.sent();
+                    // atype apath templateid
+                    return [4 /*yield*/, dbutils.run(db, "insert into wcp_project (atype,aname,apath,templateid) values('webpack','" + path.basename(newpath_newproject) + "','" + newpath_newproject + "'," + usage_template.id + ")")];
+                case 16:
+                    // atype apath templateid
+                    _b.sent();
                     msgref.succeed("finish template choose, the name is " + _.get(usage_template, 'aname'));
                     msgref = createNewInfoSession("create project record in database...");
-                    msgref.succeed("Congratulation! Project finish initialize, you could manage the project in web control panel. To access web control panel, you should run command \"wcp view\"");
-                    return [3 /*break*/, 15];
-                case 14: return [3 /*break*/, 15];
-                case 15: return [2 /*return*/];
+                    msgref.succeed("Congratulation! Create new Project Successd! You could manage the project in web control panel. To access web control panel, you should run command \"wcp view\"");
+                    return [3 /*break*/, 18];
+                case 17: return [3 /*break*/, 18];
+                case 18: return [2 /*return*/];
             }
         });
     });

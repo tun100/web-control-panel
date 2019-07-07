@@ -3,6 +3,9 @@
   "version": "1.0.1",
   "description": "",
   "main": "exec/entrypoint.js",
+  "bin":{
+    "wcp":"./exec/entrypoint.js"
+  },
   "scripts": {
     "compile": "tsc --outDir ./exec ./src/entrypoint.ts",
     "dev": "npm run compile && node ./exec/entrypoint.js",
