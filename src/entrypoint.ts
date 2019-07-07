@@ -1,123 +1,30 @@
 #!/usr/bin/env node
-
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import * as process from 'process';
 import * as inquirer from 'inquirer';
+import { dbutils, getAppHomeDir, getStoreDir, createNewInfoSession } from './utils';
 var sqlite3 = require('sqlite3').verbose();
 var ora = require('ora');
 var _ = require('lodash');
 var sh = require('shelljs');
 var gutils = require('global-code-utils');
 
-var { getCrtPath, readDir, isFile, isDir } = gutils;
+var {
+	exitProgram,
+	isEmptyOrHelpArg,
+	getArgWithoutExec,
+	plainlog,
+	isPathExists,
+	getCwdDir,
+	getCrtPath,
+	readDir,
+	isFile,
+	isDir,
+} = gutils;
 
-function getCwdDir(targetPath) {
-	return path.join(process.cwd(), targetPath);
-}
-
-function isPathExists(targetPath) {
-	return fs.existsSync(targetPath);
-}
-
-function plainlog(...str) {
-	console.log(...str);
-}
-
-function getArgWithoutExec() {
-	return _.drop(process.argv, 2);
-}
-
-function isEmptyOrHelpArg() {
-	var arr = getArgWithoutExec();
-	return _.isEmpty(arr) || _.first(arr) === 'help';
-}
-
-function exitProgram(code) {
-	return process.exit(code);
-}
-
-// crt project variables and functions
-let wcp_system_conf = {};
-
-function createNewInfoSession(msg: string) {
-	return ora(msg).start();
-}
-
-function getAppHomeDir(targetPath: string = '') {
-	var storedir = path.join(os.homedir(), '.wcpstore', targetPath);
-	return storedir;
-}
-
-function getStoreDir(targetPath: string = '') {
-	return path.join(wcp_system_conf['storedir'] || '', targetPath);
-}
-
-function execCmd(cmd: string, silent = false) {
-	return new Promise((r, e) => {
-		var ref = sh.exec(
-			cmd,
-			{
-				silent,
-				async: true,
-			},
-			(err, res) => {
-				if (err) {
-					e(err);
-				} else {
-					r(res);
-				}
-			}
-		);
-	});
-}
-
-const dbutils = {
-	count: async function(db, sql: string, param?: {}) {
-		var res = await dbutils.all(db, `select count(*) as ctn from (${sql}) ctntb`);
-		return _.get(res, '0.ctn');
-	},
-	handleIfEmpty: async function(db, sql: string, param: {}, ifempty: () => {}, returndata?: boolean) {
-		var res_ctn = await dbutils.count(db, sql, param);
-		if (res_ctn === 0) {
-			await ifempty();
-		}
-		if (returndata) {
-			var res_data = await dbutils.all(db, sql, param);
-			return res_data;
-		}
-	},
-	all: async function(db, sql: string, param?: {}) {
-		return new Promise((res_func, err_func) => {
-			db.all(sql, param, function(error, res) {
-				if (error) {
-					err_func(error);
-				} else {
-					res_func(res);
-				}
-			});
-		});
-	},
-	run: async function(db, sql: string, param?: {}) {
-		return new Promise((res_func, err_func) => {
-			db.run(sql, param, function(error, res) {
-				if (error) {
-					err_func(error);
-				} else {
-					res_func(res);
-				}
-			});
-		});
-	},
-	runsafe: async function(db, sql: string, param?: {}) {
-		try {
-			return await dbutils.run(db, sql, param);
-		} catch (error) {
-			// ignore error, dbrunsafe doesn't print the error
-		}
-	},
-};
+export let wcp_system_conf = {};
 
 async function initdb(db) {
 	// create table
@@ -291,7 +198,9 @@ async function entryfunc() {
 						{
 							type: 'confirm',
 							name: 'value',
-							message: `path ${newpath_newproject} contains ${_.size(subfiles)} files, do you wanna remove these files?`,
+							message: `path ${newpath_newproject} contains ${_.size(
+								subfiles
+							)} files, do you wanna remove these files?`,
 							default: true,
 						},
 					]);
