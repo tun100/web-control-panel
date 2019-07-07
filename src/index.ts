@@ -46,12 +46,12 @@ function getStoreDir(targetPath: string = '') {
 	return storedir;
 }
 
-function execSilent(cmd: string) {
+function execCmd(cmd: string, silent = false) {
 	return new Promise((r, e) => {
-		sh.exec(
+		var ref = sh.exec(
 			cmd,
 			{
-				silent: true,
+				silent,
 				async: true,
 			},
 			(err, res) => {
@@ -178,7 +178,7 @@ async function entryfunc() {
 						},
 					]);
 					if (shouldDelRes['value']) {
-                        msgref = createOra(`deleteing target dir files...`);
+						msgref = createOra(`deleteing target dir files...`);
 						sh.rm('-rf', newpath);
 						msgref.succeed(`deleteing target dir`);
 						msgref = createOra('program will continue task');
@@ -207,15 +207,15 @@ async function entryfunc() {
 				]);
 				// install dependencies
 				var toolname = toolres['value'];
+                sh.cd(newpath);
+                msgref.stop();
 				msgref = createOra(`installing dependencies...`);
-				sh.cd(newpath);
 				switch (toolname) {
 					case 'npm':
 					case 'cnpm':
-						await execSilent(`${toolname} i -S`);
-						await execSilent(`${toolname} i -D`);
+						sh.exec(`${toolname} i -S -D --verbose`);
 					case 'yarn':
-						await execSilent(`yarn`);
+						sh.exec(`yarn`);
 				}
 				msgref.succeed(`finish install dependencies`);
 				break;
