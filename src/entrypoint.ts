@@ -39,7 +39,7 @@ function exitProgram(code) {
 // crt project variables and functions
 let wcp_system_conf = {};
 
-function createOra(msg: string) {
+function createNewInfoSession(msg: string) {
 	return ora(msg).start();
 }
 
@@ -72,6 +72,20 @@ function execCmd(cmd: string, silent = false) {
 }
 
 const dbutils = {
+	count: async function(db, sql: string, param?: {}) {
+		var res = await dbutils.all(db, `select count(*) as ctn from (${sql}) ctntb`);
+		return _.get(res, '0.ctn');
+	},
+	handleIfEmpty: async function(db, sql: string, param: {}, ifempty: () => {}, returndata?: boolean) {
+		var res_ctn = await dbutils.count(db, sql, param);
+		if (res_ctn === 0) {
+			await ifempty();
+		}
+		if (returndata) {
+			var res_data = await dbutils.all(db, sql, param);
+			return res_data;
+		}
+	},
 	all: async function(db, sql: string, param?: {}) {
 		return new Promise((res_func, err_func) => {
 			db.all(sql, param, function(error, res) {
@@ -111,7 +125,8 @@ async function initdb(db) {
             id integer PRIMARY KEY autoincrement,
             atype text,
             apath text,
-            ajson text,
+			ajson text,
+			templateid integer,
             createtime TIMESTAMP default (datetime('now', 'localtime'))
         )`
 	);
@@ -148,17 +163,19 @@ async function initdb(db) {
             createtime TIMESTAMP default (datetime('now', 'localtime'))
         )`
 	);
-	// check wcp_system table
-	var wcp_system_data = await dbutils.all(db, `select * from wcp_system`);
-	if (_.isEmpty(wcp_system_data)) {
-		await dbutils.run(
-			db,
-			`insert into wcp_system (aname,avalue) values('storedir','${getAppHomeDir('storedir')}');`
-		);
-	}
-	// after check, requery data
-	wcp_system_data = await dbutils.all(db, `select * from wcp_system`);
-	// settings wp_system_conf
+	// WCP_SYSTEM
+	let wcp_system_data = await dbutils.handleIfEmpty(
+		db,
+		`select * from wcp_system`,
+		{},
+		async function() {
+			await dbutils.run(
+				db,
+				`insert into wcp_system (aname,avalue) values('storedir','${getAppHomeDir('storedir')}');`
+			);
+		},
+		true
+	);
 	wcp_system_conf = _.chain(wcp_system_data).groupBy(x => x['aname']).mapValues(x => _.get(x, '0.avalue')).value();
 }
 
@@ -201,19 +218,28 @@ async function entryfunc() {
 		// get and auto create store dir
 		const storedir = getStoreDir();
 		if (!isPathExists(storedir)) {
-			msgref = createOra(`homedir not settings(${storedir}), creating...`);
+			msgref = createNewInfoSession(`homedir not settings(${storedir}), creating...`);
 			sh.mkdir('-p', storedir);
 			msgref.succeed(`creating homedir(${storedir}) success`);
 		}
 		// init store dir
-		msgref = createOra('init storedir...');
-		// await dbutils.all(db,`select * from `)
+		msgref = createNewInfoSession('init storedir...');
+		await dbutils.handleIfEmpty(db, `select * from wcp_template`, {}, async function() {
+			let templateDefaultFolder = getStoreDir('default');
+			await dbutils.run(
+				db,
+				`insert into wcp_template(atype,aname,apath) values('system','default','${templateDefaultFolder}')`,
+				{}
+			);
+			sh.mkdir('-p', templateDefaultFolder);
+			sh.cp('-rf', [getCrtPath('../store/*', __dirname)], templateDefaultFolder);
+		});
 		msgref.succeed('finish init storedir');
 		// start analyze arguments
 		let argArr: string[] = getArgWithoutExec();
 		let command = _.first(argArr);
 		let options = _.get(argArr, 1);
-		var msgref = createOra('initializing task...');
+		var msgref = createNewInfoSession('initializing task...');
 		switch (command) {
 			case 'list-project':
 				break;
@@ -241,10 +267,10 @@ async function entryfunc() {
 						},
 					]);
 					if (res_should_del['value']) {
-						msgref = createOra(`deleteing target dir files...`);
+						msgref = createNewInfoSession(`deleteing target dir files...`);
 						sh.rm('-rf', newpath_newproject);
 						msgref.succeed(`deleteing target dir`);
-						msgref = createOra('program will continue task');
+						msgref = createNewInfoSession('program will continue task');
 					} else {
 						msgref.info(
 							`path already created, wcp need an empty and non created dir, the path is ${newpath_newproject}`
@@ -255,36 +281,36 @@ async function entryfunc() {
 				sh.mkdir('-p', newpath_newproject);
 				msgref.succeed(`new project path is ${newpath_newproject}`);
 				msgref.stop();
-				msgref = createOra(`initializing project files...`);
+				msgref = createNewInfoSession(`initializing project files...`);
 				sh.cp(
 					'-rf',
 					[getCrtPath('../template/*', __dirname), getCrtPath('../template/.*', __dirname)],
 					newpath_newproject
 				);
 				msgref.succeed(`finish init project files`);
-				// ask user which dep tools to use
-				var toolres = await inquirer.prompt([
-					{
-						type: 'list',
-						name: 'value',
-						choices: ['npm', 'cnpm', 'yarn'],
-						message: 'which one do you wanna use?',
-						default: 'npm',
-					},
-				]);
-				// install dependencies
-				var toolname = toolres['value'];
-				sh.cd(newpath_newproject);
-				msgref.stop();
-				msgref = createOra(`installing dependencies...`);
-				switch (toolname) {
-					case 'npm':
-					case 'cnpm':
-						sh.exec(`${toolname} i -S -D --verbose`);
-					case 'yarn':
-						sh.exec(`yarn`);
+				msgref = createNewInfoSession(`get current wcp template list...`);
+				let template_list = await dbutils.all(db, `select * from wcp_template`, {});
+				let usage_template = null;
+				if (_.size(template_list) !== 1) {
+					let template_aname_list = _.map(template_list, x => x['aname']);
+					var res_choose_template = await inquirer.prompt([
+						{
+							type: 'list',
+							name: 'value',
+							choices: template_aname_list,
+							message: 'which template do you wanna use?',
+							default: _.first(template_aname_list),
+						},
+					]);
+					usage_template = _.find(template_list, x => x['aname'] == res_choose_template['value']);
+				} else {
+					usage_template = _.first(template_list);
 				}
-				msgref.succeed(`finish install dependencies`);
+				msgref.succeed(`finish template choose, the name is ${_.get(usage_template, 'aname')}`);
+				msgref = createNewInfoSession(`create project record in database...`);
+				msgref.succeed(
+					`Congratulation! Project finish initialize, you could manage the project in web control panel. To access web control panel, you should run command "wcp view"`
+				);
 				break;
 			case 'view':
 				break;
@@ -293,3 +319,29 @@ async function entryfunc() {
 }
 
 entryfunc();
+
+// dependency
+async function unuse_dependency() {
+	// var toolres = await inquirer.prompt([
+	// 	{
+	// 		type: 'list',
+	// 		name: 'value',
+	// 		choices: ['npm', 'cnpm', 'yarn'],
+	// 		message: 'which one do you wanna use?',
+	// 		default: 'npm',
+	// 	},
+	// ]);
+	// // install dependencies
+	// var toolname = toolres['value'];
+	// sh.cd(newpath_newproject);
+	// msgref.stop();
+	// msgref = createOra(`installing dependencies...`);
+	// switch (toolname) {
+	// 	case 'npm':
+	// 	case 'cnpm':
+	// 		sh.exec(`${toolname} i -S -D --verbose`);
+	// 	case 'yarn':
+	// 		sh.exec(`yarn`);
+	// }
+	// msgref.succeed(`finish install dependencies`);
+}
