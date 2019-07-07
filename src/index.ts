@@ -155,7 +155,7 @@ async function entryfunc() {
 							type: 'confirm',
 							name: 'value',
 							message: `path ${newpath} already exists, do you wanna delete it?`,
-							default: false,
+							default: true,
 						},
 					]);
 					if (shouldDelRes['value']) {
@@ -182,7 +182,8 @@ async function entryfunc() {
 						message: 'which one do you wanna use?',
 						default: 'npm',
 					},
-				]);
+                ]);
+                // install dependencies
                 var toolname = toolres['value'];
                 msgref = createOra(`installing dependencies...`);
 				sh.cd(newpath);
