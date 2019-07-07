@@ -9,6 +9,8 @@ var _ = require('lodash');
 var sh = require('shelljs');
 var gutils = require('global-code-utils');
 
+var { getCrtPath, readDir, isFile, isDir } = gutils;
+
 function getCwdDir(targetPath) {
 	return path.join(process.cwd(), targetPath);
 }
@@ -151,6 +153,9 @@ async function entryfunc() {
 				}
 				msgref_init.succeed(`new project path is ${options}`);
 				msgref_init.stop();
+				msgref = createOra(`initializing project files...`);
+				var originalFileDir = getCrtPath('conf');
+				sh.cp('-rf', originalFileDir, options);
 				break;
 			case 'view':
 				break;
