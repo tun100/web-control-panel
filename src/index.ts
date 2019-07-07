@@ -138,7 +138,7 @@ async function entryfunc() {
 		let argArr: string[] = getArgWithoutExec();
 		let command = _.first(argArr);
 		let options = _.get(argArr, 1);
-		var msgref_init = createOra('initializing task...');
+		var msgref = createOra('initializing task...');
 		switch (command) {
 			case 'list-project':
 				break;
@@ -148,19 +148,42 @@ async function entryfunc() {
 					options = getCwdDir('');
 				}
 				if (isPathExists(options)) {
-					msgref_init.info(
-						`path already created, wcp need an empty and non created dir, the path is ${options}`
-					);
-					exitProgram(-1);
-				} else {
-					sh.mkdir('-p', options);
+					msgref.stop();
+					var shouldDelRes = await inquirer.prompt([
+						{
+							type: 'confirm',
+							name: 'value',
+							message: `path ${options} already exists, do you wanna delete it?`,
+							default: false,
+						},
+					]);
+					if (shouldDelRes['value']) {
+						sh.rm('-rf', options);
+					} else {
+						msgref.info(
+							`path already created, wcp need an empty and non created dir, the path is ${options}`
+						);
+						exitProgram(-1);
+					}
 				}
-				msgref_init.succeed(`new project path is ${options}`);
-				msgref_init.stop();
+				sh.mkdir('-p', options);
+				msgref.succeed(`new project path is ${options}`);
+				msgref.stop();
 				msgref = createOra(`initializing project files...`);
-				var originalFileDir = getCrtPath('conf', __dirname);
-				plainlog(originalFileDir, options);
-				sh.cp('-rf', originalFileDir, options);
+				sh.cp('-rf', [getCrtPath('../conf/*', __dirname), getCrtPath('../conf/.*', __dirname)], options);
+				msgref.succeed(`finish init project files`);
+				// ask user which dep tools to use
+				var toolres = await inquirer.prompt([
+					{
+						type: 'list',
+						name: 'value',
+						choices: ['npm', 'cnpm', 'yarn'],
+						message: 'wcp will install project dependencies, which tool you wanna use?',
+						default: 'npm',
+					},
+                ]);
+                var toolname = toolres['value'];
+				plainlog(toolres);
 				break;
 			case 'view':
 				break;
