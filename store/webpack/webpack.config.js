@@ -1,21 +1,19 @@
 // utils and node.js api
 const fs = require('fs')
-const sh = require('shelljs')
-const _ = require('lodash')
+const sh = require('store/webpack/template/shelljs')
+const _ = require('store/webpack/template/lodash')
 const os = require('os')
 const path = require('path')
 // webpack import
-const webpack = require('webpack')
+const webpack = require('store/webpack/template/webpack')
 const compiler = webpack.compiler
-const HappyPack = require('happypack')
-const MiniCssExtractPlugin = require('mini-css-extract-plugin')
-const VueLoaderPlugin = require('vue-loader/lib/plugin')
-const AddAssetHtmlPlugin = require('add-asset-html-webpack-plugin')
-const CleanWebpackPlugin = require('clean-webpack-plugin')
-const HtmlWebpackPlugin = require('html-webpack-plugin')
-const CopyWebpackPlugin = require('copy-webpack-plugin')
-// environment
-process.env.NODE_ENV = true ? 'development' : 'production'
+const HappyPack = require('store/webpack/template/happypack')
+const MiniCssExtractPlugin = require('store/webpack/template/mini-css-extract-plugin')
+const VueLoaderPlugin = require('store/webpack/template/vue-loader/lib/plugin')
+const AddAssetHtmlPlugin = require('store/webpack/template/add-asset-html-webpack-plugin')
+const CleanWebpackPlugin = require('store/webpack/template/clean-webpack-plugin')
+const HtmlWebpackPlugin = require('store/webpack/template/html-webpack-plugin')
+const CopyWebpackPlugin = require('store/webpack/template/copy-webpack-plugin')
 // webpack init
 const happyThreadPool = HappyPack.ThreadPool({
   size: os.cpus().length
@@ -39,7 +37,7 @@ function createStyleUseObject (isModule = true) {
   ]
 }
 // variables declare
-var babelrc = fs.readFileSync(utils.getCrtPath('.babelrc'),'UTF-8');
+var babelrc = fs.readFileSync(utils.getCrtPath('.babelrc'), 'UTF-8')
 var entryobj = {}
 var htmlPlugins = []
 var distdir = utils.getCrtPath('dist')
@@ -61,6 +59,8 @@ _.forEach(pagesArr, eachPage => {
 
 module.exports = mode => {
   var isDev = mode === 'dev'
+	// environment
+  process.env.NODE_ENV = isDev ? 'development' : 'production'
   var contentHashValue = isDev ? 'hash' : 'contenthash'
   var webpackConfig = {
     devServer: {

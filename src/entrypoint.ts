@@ -36,14 +36,20 @@ function exitProgram(code) {
 	return process.exit(code);
 }
 
-// crt project functions
+// crt project variables and functions
+let wcp_system_conf = {};
+
 function createOra(msg: string) {
 	return ora(msg).start();
 }
 
-function getStoreDir(targetPath: string = '') {
+function getAppHomeDir(targetPath: string = '') {
 	var storedir = path.join(os.homedir(), '.wcpstore', targetPath);
 	return storedir;
+}
+
+function getStoreDir(targetPath: string = '') {
+	return path.join(wcp_system_conf['storedir'] || '', targetPath);
 }
 
 function execCmd(cmd: string, silent = false) {
@@ -66,6 +72,17 @@ function execCmd(cmd: string, silent = false) {
 }
 
 const dbutils = {
+	all: async function(db, sql: string, param?: {}) {
+		return new Promise((res_func, err_func) => {
+			db.all(sql, param, function(error, res) {
+				if (error) {
+					err_func(error);
+				} else {
+					res_func(res);
+				}
+			});
+		});
+	},
 	run: async function(db, sql: string, param?: {}) {
 		return new Promise((res_func, err_func) => {
 			db.run(sql, param, function(error, res) {
@@ -87,6 +104,7 @@ const dbutils = {
 };
 
 async function initdb(db) {
+	// create table
 	await dbutils.run(
 		db,
 		`CREATE TABLE IF NOT EXISTS wcp_project (
@@ -109,6 +127,18 @@ async function initdb(db) {
 	);
 	await dbutils.run(
 		db,
+		`CREATE TABLE IF NOT EXISTS wcp_template (
+            id integer PRIMARY KEY autoincrement,
+            atype text,
+            aname text,
+			apath text,
+			ajson text,
+			updatetime timestamp,
+            createtime TIMESTAMP default (datetime('now', 'localtime'))
+        )`
+	);
+	await dbutils.run(
+		db,
 		`CREATE TABLE IF NOT EXISTS wcp_log (
             id integer PRIMARY KEY autoincrement,
             atype text,
@@ -118,41 +148,67 @@ async function initdb(db) {
             createtime TIMESTAMP default (datetime('now', 'localtime'))
         )`
 	);
+	// check wcp_system table
+	var wcp_system_data = await dbutils.all(db, `select * from wcp_system`);
+	if (_.isEmpty(wcp_system_data)) {
+		await dbutils.run(
+			db,
+			`insert into wcp_system (aname,avalue) values('storedir','${getAppHomeDir('storedir')}');`
+		);
+	}
+	// after check, requery data
+	wcp_system_data = await dbutils.all(db, `select * from wcp_system`);
+	// settings wp_system_conf
+	wcp_system_conf = _.chain(wcp_system_data).groupBy(x => x['aname']).mapValues(x => _.get(x, '0.avalue')).value();
 }
 
-const helpText = `web-control-panel help
+const func_helptext = () => {
+	return `web-control-panel help
 Usage: wcp [command] [flags]
 
 Displays help information.
 
 Options: 
+wcp view # serve a website, it's could help you manage all project
 wcp list-project # list all project you have created
 wcp new-project [dirpath] # create a webpack project at target path, default is crt cwd
-wcp view # serve a website, it's could help you manage all project
+wcp set-storedir [dirpath] # set dirpath for store project dependecies and files
 
-Data Store:
-All of project meta information is in ${getStoreDir()}
+Meta Directory:
+All of project meta information is in ${getAppHomeDir()}
+
+Store Directory:
+All of dependencies and files is in ${getStoreDir()}
 
 About me:
 Welcome to star or fork :)
 Github: https://github.com/tun100/
 Repository: https://github.com/tun100/web-control-panel`;
+};
 
 async function entryfunc() {
+	// mkdir crt
+	let apphome = getAppHomeDir('');
+	sh.mkdir('-p', apphome);
+	// initialize sqlite datafile and data conn
+	let db = new sqlite3.Database(getAppHomeDir('meta.db'));
+	await initdb(db);
+	// start work flow
 	if (isEmptyOrHelpArg()) {
 		// print help text
-		plainlog(helpText);
+		plainlog(func_helptext());
 	} else {
 		// get and auto create store dir
 		const storedir = getStoreDir();
 		if (!isPathExists(storedir)) {
-			var msgref = createOra(`homedir not settings(${storedir}), creating...`);
+			msgref = createOra(`homedir not settings(${storedir}), creating...`);
 			sh.mkdir('-p', storedir);
 			msgref.succeed(`creating homedir(${storedir}) success`);
 		}
-		// initialize sqlite datafile and data conn
-		var db = new sqlite3.Database(getStoreDir('meta.db'));
-		initdb(db);
+		// init store dir
+		msgref = createOra('init storedir...');
+		// await dbutils.all(db,`select * from `)
+		msgref.succeed('finish init storedir');
 		// start analyze arguments
 		let argArr: string[] = getArgWithoutExec();
 		let command = _.first(argArr);
@@ -161,39 +217,50 @@ async function entryfunc() {
 		switch (command) {
 			case 'list-project':
 				break;
+			case 'set-storedir':
+				let crtpath_storedir = getStoreDir();
+				let newpath_storedir = options;
+				sh.cp('-rf', crtpath_storedir, newpath_newproject);
+				await dbutils.run(db, `update wcp_system set avalue='${newpath_storedir}' where aname='storedir'`);
+				plainlog('update storedir success');
+				break;
 			case 'new-project':
 				// check path
 				if (_.isNil(options)) {
 					options = getCwdDir('');
 				}
-				var newpath = options;
-				if (isPathExists(newpath)) {
+				var newpath_newproject = options;
+				if (isPathExists(newpath_newproject)) {
 					msgref.stop();
-					var shouldDelRes = await inquirer.prompt([
+					var res_should_del = await inquirer.prompt([
 						{
 							type: 'confirm',
 							name: 'value',
-							message: `path ${newpath} already exists, do you wanna delete it?`,
+							message: `path ${newpath_newproject} already exists, do you wanna delete it?`,
 							default: true,
 						},
 					]);
-					if (shouldDelRes['value']) {
+					if (res_should_del['value']) {
 						msgref = createOra(`deleteing target dir files...`);
-						sh.rm('-rf', newpath);
+						sh.rm('-rf', newpath_newproject);
 						msgref.succeed(`deleteing target dir`);
 						msgref = createOra('program will continue task');
 					} else {
 						msgref.info(
-							`path already created, wcp need an empty and non created dir, the path is ${newpath}`
+							`path already created, wcp need an empty and non created dir, the path is ${newpath_newproject}`
 						);
 						exitProgram(-1);
 					}
 				}
-				sh.mkdir('-p', newpath);
-				msgref.succeed(`new project path is ${newpath}`);
+				sh.mkdir('-p', newpath_newproject);
+				msgref.succeed(`new project path is ${newpath_newproject}`);
 				msgref.stop();
 				msgref = createOra(`initializing project files...`);
-				sh.cp('-rf', [getCrtPath('../conf/*', __dirname), getCrtPath('../conf/.*', __dirname)], newpath);
+				sh.cp(
+					'-rf',
+					[getCrtPath('../template/*', __dirname), getCrtPath('../template/.*', __dirname)],
+					newpath_newproject
+				);
 				msgref.succeed(`finish init project files`);
 				// ask user which dep tools to use
 				var toolres = await inquirer.prompt([
@@ -207,8 +274,8 @@ async function entryfunc() {
 				]);
 				// install dependencies
 				var toolname = toolres['value'];
-                sh.cd(newpath);
-                msgref.stop();
+				sh.cd(newpath_newproject);
+				msgref.stop();
 				msgref = createOra(`installing dependencies...`);
 				switch (toolname) {
 					case 'npm':
