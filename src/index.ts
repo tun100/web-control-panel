@@ -147,14 +147,19 @@ async function entryfunc() {
 				if (_.isNil(options)) {
 					options = getCwdDir('');
 				}
-				if (!isPathExists(options)) {
-					msgref_init.fail(`path doesn't exists, the path is ${options}`);
+				if (isPathExists(options)) {
+					msgref_init.info(
+						`path already created, wcp need an empty and non created dir, the path is ${options}`
+					);
 					exitProgram(-1);
+				} else {
+					sh.mkdir('-p', options);
 				}
 				msgref_init.succeed(`new project path is ${options}`);
 				msgref_init.stop();
 				msgref = createOra(`initializing project files...`);
-				var originalFileDir = getCrtPath('conf');
+				var originalFileDir = getCrtPath('conf', __dirname);
+				plainlog(originalFileDir, options);
 				sh.cp('-rf', originalFileDir, options);
 				break;
 			case 'view':

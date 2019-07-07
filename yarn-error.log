@@ -1,5 +1,5 @@
 Arguments: 
-  C:\Program Files\nodejs\node.exe C:\Users\lai_h\AppData\Roaming\npm\node_modules\yarn\bin\yarn.js add @types/sqllite3
+  C:\Program Files\nodejs\node.exe C:\Users\lai_h\AppData\Roaming\npm\node_modules\yarn\bin\yarn.js
 
 PATH: 
   C:\Users\lai_h\bin;C:\Program Files\Git\mingw64\bin;C:\Program Files\Git\usr\local\bin;C:\Program Files\Git\usr\bin;C:\Program Files\Git\usr\bin;C:\Program Files\Git\mingw64\bin;C:\Program Files\Git\usr\bin;C:\Users\lai_h\bin;C:\Program Files (x86)\NetSarang\Xmanager 6;C:\Program Files (x86)\NetSarang\Xshell 6;C:\Python37\Scripts;C:\Python37;C:\app\lai_h\product\11.2.0\dbhome_1\bin;C:\Program Files (x86)\Windows Resource Kits\Tools;C:\ProgramData\Oracle\Java\javapath;C:\Program Files\Microsoft MPI\Bin;C:\windows\system32;C:\windows;C:\windows\System32\Wbem;C:\windows\System32\WindowsPowerShell\v1.0;C:\Program Files\Oracle\VirtualBox;C:\Program Files\dotnet;C:\Program Files (x86)\Bitvise SSH Client;C:\Program Files\Git\cmd;C:\Program Files\Git\mingw64\bin;C:\Program Files\Git\usr\bin;C:\apache-maven-3.6.0\bin;C:\usr\bin;C:\Program Files\TortoiseSVN\bin;C:\Program Files\nodejs;C:\Program Files\CMake\bin;C:\ProgramData\chocolatey\bin;C:\Program Files\doxygen\bin;C:\Users\lai_h\AppData\Local\Programs\Python\Python37\Scripts;C:\Users\lai_h\AppData\Local\Programs\Python\Python37;C:\Users\lai_h\AppData\Local\Microsoft\WindowsApps;C:\Users\lai_h\AppData\Local\Programs\Microsoft VS Code\bin;C:\Program Files\JetBrains\IntelliJ IDEA 2019.1\bin;C:\Program Files\Oracle\VirtualBox;C:\runkit;C:\Program Files\Java\jdk1.8.0_131\bin;C:\Program Files\Wireshark;C:\git-sdk-64;C:\app\lai_h\product\11.2.0\dbhome_1\BIN;C:\Program Files\Git\;C:\Users\lai_h\go\bin;C:\Users\lai_h\AppData\Local\Programs\Fiddler;C:\Qt\Qt5.9.1\5.9.1\mingw53_32\bin;C:\Users\lai_h\AppData\Roaming\npm;C:\core\mysql\sys\mysql-5.7.24-winx64\bin;C:\Program Files\PostgreSQL\10\bin;C:\Program Files\Git\usr\bin\vendor_perl;C:\Program Files\Git\usr\bin\core_perl
@@ -14,17 +14,7 @@ Platform:
   win32 x64
 
 Trace: 
-  Error: https://registry.npmjs.org/@types%2fsqllite3: Not found
-      at Request.params.callback [as _callback] (C:\Users\lai_h\AppData\Roaming\npm\node_modules\yarn\lib\cli.js:66058:18)
-      at Request.self.callback (C:\Users\lai_h\AppData\Roaming\npm\node_modules\yarn\lib\cli.js:129541:22)
-      at emitTwo (events.js:126:13)
-      at Request.emit (events.js:214:7)
-      at Request.<anonymous> (C:\Users\lai_h\AppData\Roaming\npm\node_modules\yarn\lib\cli.js:130513:10)
-      at emitOne (events.js:116:13)
-      at Request.emit (events.js:211:7)
-      at IncomingMessage.<anonymous> (C:\Users\lai_h\AppData\Roaming\npm\node_modules\yarn\lib\cli.js:130435:12)
-      at Object.onceWrapper (events.js:313:30)
-      at emitNone (events.js:111:20)
+  Error: ENOENT: no such file or directory, copyfile 'C:\Users\lai_h\AppData\Local\Yarn\Cache\v4\npm-ansi-regex-4.1.0-8b9f8f08cf1acb843756a839ca8c7e3168c51997\node_modules\ansi-regex\index.js' -> 'F:\githubProject\control-panel\node_modules\inquirer\node_modules\ansi-regex\index.js'
 
 npm manifest: 
   {
@@ -51,9 +41,8 @@ npm manifest:
     "dependencies": {
       "@types/inquirer": "^6.0.3",
       "@types/node": "^12.0.12",
-      "@types/ora": "^3.2.0",
       "glob": "^7.1.4",
-      "global-code-utils": "^1.0.1",
+      "global-code-utils": "^1.0.2",
       "inquirer": "^6.4.1",
       "lodash": "^4.17.11",
       "ora": "^3.4.0",
