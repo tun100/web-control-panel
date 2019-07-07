@@ -193,6 +193,7 @@ wcp view # serve a website, it's could help you manage all project
 wcp list-project # list all project you have created
 wcp new-project [dirpath] # create a webpack project at target path, default is crt cwd
 wcp set-storedir [dirpath] # set dirpath for store project dependecies and files
+wcp reset # RESET ALL CONFIG AND DATABASE FILE
 
 Meta Directory:
 All of project meta information is in ${getAppHomeDir()}
@@ -246,6 +247,23 @@ async function entryfunc() {
 		let options = _.get(argArr, 1);
 		var initstr: string = 'initializing task...';
 		switch (command) {
+			case 'reset':
+				var res_should_reset = await inquirer.prompt([
+					{
+						type: 'confirm',
+						name: 'value',
+						message: `Do you really wanna RESET? This operation will clear all CONFIG and DATABASE FILE !!!`,
+						default: true,
+					},
+				]);
+				if (res_should_reset['value']) {
+					let storedir = getStoreDir();
+					let appdir = getAppHomeDir();
+					sh.rm('-rf', appdir);
+					sh.rm('-rf', storedir);
+					plainlog('already reset web-control-panel');
+				}
+				break;
 			case 'list-project':
 				var project_list = await dbutils.all(db, `select * from wcp_project`, {});
 				var project_name_list_str = _.join(_.map(project_list, x => `[${x['id']}]: ${x['aname']}`), '\n');
@@ -266,13 +284,14 @@ async function entryfunc() {
 					options = getCwdDir('');
 				}
 				var newpath_newproject = options;
-				if (isPathExists(newpath_newproject)) {
+				let subfiles = fs.readdirSync(newpath_newproject);
+				if (!_.isEmpty(subfiles)) {
 					msgref.stop();
 					var res_should_del = await inquirer.prompt([
 						{
 							type: 'confirm',
 							name: 'value',
-							message: `path ${newpath_newproject} already exists, do you wanna delete it?`,
+							message: `path ${newpath_newproject} contains ${_.size(subfiles)} files, do you wanna remove these files?`,
 							default: true,
 						},
 					]);
@@ -293,7 +312,7 @@ async function entryfunc() {
 				msgref.stop();
 				msgref = createNewInfoSession(`initializing project files...`);
 				sh.cp('-rf', [getCrtPath('../template/*', __dirname)], newpath_newproject);
-				msgref.succeed(`finish init project files`);
+				msgref.succeed(`finish project files initialize`);
 				msgref = createNewInfoSession(`get current wcp template list...`);
 				let template_list = await dbutils.all(db, `select * from wcp_template`, {});
 				let usage_template = null;

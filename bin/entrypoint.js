@@ -229,11 +229,11 @@ function initdb(db) {
     });
 }
 var func_helptext = function () {
-    return "web-control-panel help\nUsage: wcp [command] [flags]\n\nDisplays help information.\n\nOptions: \nwcp view # serve a website, it's could help you manage all project\nwcp list-project # list all project you have created\nwcp new-project [dirpath] # create a webpack project at target path, default is crt cwd\nwcp set-storedir [dirpath] # set dirpath for store project dependecies and files\n\nMeta Directory:\nAll of project meta information is in " + getAppHomeDir() + "\n\nStore Directory:\nAll of dependencies and files is in " + getStoreDir() + "\n\nAbout me:\nWelcome to star or fork :)\nGithub: https://github.com/tun100/\nRepository: https://github.com/tun100/web-control-panel";
+    return "web-control-panel help\nUsage: wcp [command] [flags]\n\nDisplays help information.\n\nOptions: \nwcp view # serve a website, it's could help you manage all project\nwcp list-project # list all project you have created\nwcp new-project [dirpath] # create a webpack project at target path, default is crt cwd\nwcp set-storedir [dirpath] # set dirpath for store project dependecies and files\nwcp reset # RESET ALL CONFIG AND DATABASE FILE\n\nMeta Directory:\nAll of project meta information is in " + getAppHomeDir() + "\n\nStore Directory:\nAll of dependencies and files is in " + getStoreDir() + "\n\nAbout me:\nWelcome to star or fork :)\nGithub: https://github.com/tun100/\nRepository: https://github.com/tun100/web-control-panel";
 };
 function entryfunc() {
     return __awaiter(this, void 0, void 0, function () {
-        var apphome, db, storedir, argArr, command, options, initstr, _a, project_list, project_name_list_str, msgref, crtpath_storedir, newpath_storedir, msgref, newpath_newproject, res_should_del, template_list, usage_template, template_aname_list, res_choose_template;
+        var apphome, db, storedir, argArr, command, options, initstr, _a, res_should_reset, storedir_1, appdir, project_list, project_name_list_str, msgref, crtpath_storedir, newpath_storedir, msgref, newpath_newproject, subfiles, res_should_del, template_list, usage_template, template_aname_list, res_choose_template;
         return __generator(this, function (_b) {
             switch (_b.label) {
                 case 0:
@@ -246,7 +246,7 @@ function entryfunc() {
                     if (!isEmptyOrHelpArg()) return [3 /*break*/, 2];
                     // print help text
                     plainlog(func_helptext());
-                    return [3 /*break*/, 18];
+                    return [3 /*break*/, 20];
                 case 2:
                     storedir = getStoreDir();
                     if (!isPathExists(storedir)) {
@@ -281,46 +281,66 @@ function entryfunc() {
                     initstr = 'initializing task...';
                     _a = command;
                     switch (_a) {
-                        case 'list-project': return [3 /*break*/, 4];
-                        case 'set-storedir': return [3 /*break*/, 6];
-                        case 'new-project': return [3 /*break*/, 8];
-                        case 'view': return [3 /*break*/, 17];
+                        case 'reset': return [3 /*break*/, 4];
+                        case 'list-project': return [3 /*break*/, 6];
+                        case 'set-storedir': return [3 /*break*/, 8];
+                        case 'new-project': return [3 /*break*/, 10];
+                        case 'view': return [3 /*break*/, 19];
                     }
-                    return [3 /*break*/, 18];
-                case 4: return [4 /*yield*/, dbutils.all(db, "select * from wcp_project", {})];
+                    return [3 /*break*/, 20];
+                case 4: return [4 /*yield*/, inquirer.prompt([
+                        {
+                            type: 'confirm',
+                            name: 'value',
+                            message: "Do you really wanna RESET? This operation will clear all CONFIG and DATABASE FILE !!!",
+                            "default": true
+                        },
+                    ])];
                 case 5:
+                    res_should_reset = _b.sent();
+                    if (res_should_reset['value']) {
+                        storedir_1 = getStoreDir();
+                        appdir = getAppHomeDir();
+                        sh.rm('-rf', appdir);
+                        sh.rm('-rf', storedir_1);
+                        plainlog('already reset web-control-panel');
+                    }
+                    return [3 /*break*/, 20];
+                case 6: return [4 /*yield*/, dbutils.all(db, "select * from wcp_project", {})];
+                case 7:
                     project_list = _b.sent();
                     project_name_list_str = _.join(_.map(project_list, function (x) { return "[" + x['id'] + "]: " + x['aname']; }), '\n');
                     plainlog(project_name_list_str);
-                    return [3 /*break*/, 18];
-                case 6:
+                    return [3 /*break*/, 20];
+                case 8:
                     msgref = createNewInfoSession(initstr);
                     crtpath_storedir = getStoreDir();
                     newpath_storedir = options;
                     sh.cp('-rf', crtpath_storedir, newpath_newproject);
                     return [4 /*yield*/, dbutils.run(db, "update wcp_system set avalue='" + newpath_storedir + "' where aname='storedir'")];
-                case 7:
+                case 9:
                     _b.sent();
                     plainlog('update storedir success');
-                    return [3 /*break*/, 18];
-                case 8:
+                    return [3 /*break*/, 20];
+                case 10:
                     msgref = createNewInfoSession(initstr);
                     // check path
                     if (_.isNil(options)) {
                         options = getCwdDir('');
                     }
                     newpath_newproject = options;
-                    if (!isPathExists(newpath_newproject)) return [3 /*break*/, 10];
+                    subfiles = fs.readdirSync(newpath_newproject);
+                    if (!!_.isEmpty(subfiles)) return [3 /*break*/, 12];
                     msgref.stop();
                     return [4 /*yield*/, inquirer.prompt([
                             {
                                 type: 'confirm',
                                 name: 'value',
-                                message: "path " + newpath_newproject + " already exists, do you wanna delete it?",
+                                message: "path " + newpath_newproject + " contains " + _.size(subfiles) + " files, do you wanna remove these files?",
                                 "default": true
                             },
                         ])];
-                case 9:
+                case 11:
                     res_should_del = _b.sent();
                     if (res_should_del['value']) {
                         msgref = createNewInfoSession("deleteing target dir files...");
@@ -332,20 +352,20 @@ function entryfunc() {
                         msgref.info("path already created, wcp need an empty and non created dir, the path is " + newpath_newproject);
                         exitProgram(-1);
                     }
-                    _b.label = 10;
-                case 10:
+                    _b.label = 12;
+                case 12:
                     sh.mkdir('-p', newpath_newproject);
                     msgref.succeed("new project path is " + newpath_newproject);
                     msgref.stop();
                     msgref = createNewInfoSession("initializing project files...");
                     sh.cp('-rf', [getCrtPath('../template/*', __dirname)], newpath_newproject);
-                    msgref.succeed("finish init project files");
+                    msgref.succeed("finish project files initialize");
                     msgref = createNewInfoSession("get current wcp template list...");
                     return [4 /*yield*/, dbutils.all(db, "select * from wcp_template", {})];
-                case 11:
+                case 13:
                     template_list = _b.sent();
                     usage_template = null;
-                    if (!(_.size(template_list) !== 1)) return [3 /*break*/, 13];
+                    if (!(_.size(template_list) !== 1)) return [3 /*break*/, 15];
                     template_aname_list = _.map(template_list, function (x) { return x['aname']; });
                     return [4 /*yield*/, inquirer.prompt([
                             {
@@ -356,27 +376,27 @@ function entryfunc() {
                                 "default": _.first(template_aname_list)
                             },
                         ])];
-                case 12:
+                case 14:
                     res_choose_template = _b.sent();
                     usage_template = _.find(template_list, function (x) { return x['aname'] == res_choose_template['value']; });
-                    return [3 /*break*/, 14];
-                case 13:
-                    usage_template = _.first(template_list);
-                    _b.label = 14;
-                case 14: return [4 /*yield*/, dbutils.run(db, "delete from wcp_project where apath='" + newpath_newproject + "'")];
+                    return [3 /*break*/, 16];
                 case 15:
+                    usage_template = _.first(template_list);
+                    _b.label = 16;
+                case 16: return [4 /*yield*/, dbutils.run(db, "delete from wcp_project where apath='" + newpath_newproject + "'")];
+                case 17:
                     _b.sent();
                     // atype apath templateid
                     return [4 /*yield*/, dbutils.run(db, "insert into wcp_project (atype,aname,apath,templateid) values('webpack','" + path.basename(newpath_newproject) + "','" + newpath_newproject + "'," + usage_template.id + ")")];
-                case 16:
+                case 18:
                     // atype apath templateid
                     _b.sent();
                     msgref.succeed("finish template choose, the name is " + _.get(usage_template, 'aname'));
                     msgref = createNewInfoSession("create project record in database...");
                     msgref.succeed("Congratulation! Create new Project Successd! You could manage the project in web control panel. To access web control panel, you should run command \"wcp view\"");
-                    return [3 /*break*/, 18];
-                case 17: return [3 /*break*/, 18];
-                case 18: return [2 /*return*/];
+                    return [3 /*break*/, 20];
+                case 19: return [3 /*break*/, 20];
+                case 20: return [2 /*return*/];
             }
         });
     });
