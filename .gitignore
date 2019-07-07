@@ -1,5 +1,3 @@
 node_modules
 index.js
-dist
-dist/*
-dist/**
+.vscode
