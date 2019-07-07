@@ -1,10 +1,10 @@
 {
   "name": "web-control-panel",
-  "version": "1.0.1",
+  "version": "1.0.3",
   "description": "",
   "main": "exec/entrypoint.js",
   "bin":{
-    "wcp":"./exec/entrypoint.js"
+    "wcp":"node ./exec/entrypoint.js"
   },
   "scripts": {
     "compile": "tsc --outDir ./exec ./src/entrypoint.ts",

@@ -6,10 +6,16 @@
 npm i -g web-control-panel
 ```
 
+# 具体使用
+```bash
+wcp [command] [flags]
+```
+
 # 命令参数
 ```
-wcp list-project # 列出已有的项目
-wcp new-project [dirpath] # 创建一个webpack的新项目
-wcp view # 启动后台服务，帮助你管理项目 
+wcp view # 运行Web管理面板，该面板占用内存不大，并且会提供项目管理功能
+wcp new-project [dirpath] # 创建一个新项目
+wcp list-project # 列出所有项目列表
+wcp set-storedir [dirpath] # 设置存储基础模板的目录位置
 ```
 
