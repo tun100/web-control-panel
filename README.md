@@ -13,7 +13,7 @@ wcp [command] [flags]
 
 # 命令参数
 ```
-wcp view # 运行Web管理面板，该面板占用内存不大，并且会提供项目管理功能
+wcp view # 运行Web管理面板，并且会提供项目管理功能
 wcp new-project [dirpath] # 创建一个新项目
 wcp list-project # 列出所有项目列表
 wcp set-storedir [dirpath] # 设置存储基础模板的目录位置
