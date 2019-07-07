@@ -147,30 +147,31 @@ async function entryfunc() {
 				if (_.isNil(options)) {
 					options = getCwdDir('');
 				}
-				if (isPathExists(options)) {
+				var newpath = options;
+				if (isPathExists(newpath)) {
 					msgref.stop();
 					var shouldDelRes = await inquirer.prompt([
 						{
 							type: 'confirm',
 							name: 'value',
-							message: `path ${options} already exists, do you wanna delete it?`,
+							message: `path ${newpath} already exists, do you wanna delete it?`,
 							default: false,
 						},
 					]);
 					if (shouldDelRes['value']) {
-						sh.rm('-rf', options);
+						sh.rm('-rf', newpath);
 					} else {
 						msgref.info(
-							`path already created, wcp need an empty and non created dir, the path is ${options}`
+							`path already created, wcp need an empty and non created dir, the path is ${newpath}`
 						);
 						exitProgram(-1);
 					}
 				}
-				sh.mkdir('-p', options);
-				msgref.succeed(`new project path is ${options}`);
+				sh.mkdir('-p', newpath);
+				msgref.succeed(`new project path is ${newpath}`);
 				msgref.stop();
 				msgref = createOra(`initializing project files...`);
-				sh.cp('-rf', [getCrtPath('../conf/*', __dirname), getCrtPath('../conf/.*', __dirname)], options);
+				sh.cp('-rf', [getCrtPath('../conf/*', __dirname), getCrtPath('../conf/.*', __dirname)], newpath);
 				msgref.succeed(`finish init project files`);
 				// ask user which dep tools to use
 				var toolres = await inquirer.prompt([
@@ -178,12 +179,22 @@ async function entryfunc() {
 						type: 'list',
 						name: 'value',
 						choices: ['npm', 'cnpm', 'yarn'],
-						message: 'wcp will install project dependencies, which tool you wanna use?',
+						message: 'which one do you wanna use?',
 						default: 'npm',
 					},
-                ]);
+				]);
                 var toolname = toolres['value'];
-				plainlog(toolres);
+                msgref = createOra(`installing dependencies...`);
+				sh.cd(newpath);
+				switch (toolname) {
+					case 'npm':
+					case 'cnpm':
+						sh.exec(`${toolname} i -S`);
+						sh.exec(`${toolname} i -D`);
+					case 'yarn':
+						sh.exec(`yarn`);
+                }
+                msgref.succeed(`finish install dependencies`);
 				break;
 			case 'view':
 				break;
