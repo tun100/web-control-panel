@@ -46,6 +46,12 @@ function getStoreDir(targetPath: string = '') {
 	return storedir;
 }
 
+function execSilent(cmd: string) {
+	sh.exec(cmd, {
+		silent: true,
+	});
+}
+
 const dbutils = {
 	run: async function(db, sql: string, param?: {}) {
 		return new Promise((res_func, err_func) => {
@@ -182,20 +188,20 @@ async function entryfunc() {
 						message: 'which one do you wanna use?',
 						default: 'npm',
 					},
-                ]);
-                // install dependencies
-                var toolname = toolres['value'];
-                msgref = createOra(`installing dependencies...`);
+				]);
+				// install dependencies
+				var toolname = toolres['value'];
+				msgref = createOra(`installing dependencies...`);
 				sh.cd(newpath);
 				switch (toolname) {
 					case 'npm':
 					case 'cnpm':
-						sh.exec(`${toolname} i -S`);
-						sh.exec(`${toolname} i -D`);
+						execSilent(`${toolname} i -S`);
+						execSilent(`${toolname} i -D`);
 					case 'yarn':
-						sh.exec(`yarn`);
-                }
-                msgref.succeed(`finish install dependencies`);
+						execSilent(`yarn`);
+				}
+				msgref.succeed(`finish install dependencies`);
 				break;
 			case 'view':
 				break;
