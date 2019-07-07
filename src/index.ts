@@ -47,8 +47,21 @@ function getStoreDir(targetPath: string = '') {
 }
 
 function execSilent(cmd: string) {
-	sh.exec(cmd, {
-		silent: true,
+	return new Promise((r, e) => {
+		sh.exec(
+			cmd,
+			{
+				silent: true,
+				async: true,
+			},
+			(err, res) => {
+				if (err) {
+					e(err);
+				} else {
+					r(res);
+				}
+			}
+		);
 	});
 }
 
@@ -165,7 +178,10 @@ async function entryfunc() {
 						},
 					]);
 					if (shouldDelRes['value']) {
+                        msgref = createOra(`deleteing target dir files...`);
 						sh.rm('-rf', newpath);
+						msgref.succeed(`deleteing target dir`);
+						msgref = createOra('program will continue task');
 					} else {
 						msgref.info(
 							`path already created, wcp need an empty and non created dir, the path is ${newpath}`
@@ -196,10 +212,10 @@ async function entryfunc() {
 				switch (toolname) {
 					case 'npm':
 					case 'cnpm':
-						execSilent(`${toolname} i -S`);
-						execSilent(`${toolname} i -D`);
+						await execSilent(`${toolname} i -S`);
+						await execSilent(`${toolname} i -D`);
 					case 'yarn':
-						execSilent(`yarn`);
+						await execSilent(`yarn`);
 				}
 				msgref.succeed(`finish install dependencies`);
 				break;
